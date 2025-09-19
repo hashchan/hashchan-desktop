@@ -1,4 +1,4 @@
-# HashChan Desktop
+# HashChan Desktop (Alpha, Prototyping)
 
 A cross-platform desktop application that combines a lightweight Ethereum node with a GUI interface for HashChan3.
 

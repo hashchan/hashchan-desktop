@@ -64,6 +64,8 @@ cd hashchan/desktop
 cargo build --release
 ```
 
+Note: Cargo.lock is committed to the repository to ensure reproducible builds. When contributing, please commit any changes to Cargo.lock that result from your modifications.
+
 ### Running
 
 ```bash

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # HashChan Desktop: Research Project
+=======
+# HashChan Desktop (Alpha, Prototyping)
+>>>>>>> 4acf642d10868f4cd6673d2068df4cea3db5ef2e
 
 ## The Problem We're Solving
 
@@ -115,6 +119,7 @@ This experimental prototype is in early research phase with the following progre
 
 ### Platform Testing Notes
 
+<<<<<<< HEAD
 Our research currently focuses on specific platforms due to technical constraints:
 
 - **Linux**: Primary research platform with full functionality
@@ -160,3 +165,10 @@ This experimental approach would:
 - Facilitate easier deployment of updates during research
 
 We welcome feedback on whether this containerized approach would be valuable for your testing and usage scenarios.
+=======
+1. Complete board/thread/post views in the GUI
+2. Implement full event data parsing from the contract
+3. Add user settings and preferences
+4. Create installers for Windows, macOS, and Linux
+5. Add support for multiple networks (mainnet, testnets)
+>>>>>>> 4acf642d10868f4cd6673d2068df4cea3db5ef2e

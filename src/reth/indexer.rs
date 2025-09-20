@@ -1,6 +1,9 @@
 use std::{str::FromStr, sync::Arc, path::Path};
 use std::{future::Future, pin::Pin, task::{ready, Context, Poll}};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
+use log::error;
 
 use futures_util::{FutureExt, TryStreamExt};
 use reth::{
@@ -174,6 +177,44 @@ impl<Node: FullNodeComponents<Types: NodeTypes<Primitives = EthPrimitives>>> Fut
         
         Poll::Ready(Ok(()))
     }
+}
+
+// Start the Reth node in a separate thread and return a handle to the thread
+pub fn start_reth_thread(db: Arc<std::sync::Mutex<HashChanDB>>, shutdown_flag: Arc<AtomicBool>) -> JoinHandle<()> {
+    // Clone references for the thread
+    let reth_db = db.clone();
+    let reth_shutdown = shutdown_flag.clone();
+    
+    // Create a thread with a larger stack size to avoid stack overflow
+    let builder = thread::Builder::new()
+        .name("reth_node_thread".into())
+        .stack_size(8 * 1024 * 1024); // 8 MB stack
+        
+    builder.spawn(move || {
+        info!("Reth thread started, initializing node...");
+        
+        // Check the shutdown flag periodically
+        let check_shutdown = Arc::new(AtomicBool::new(false));
+        let check_shutdown_clone = check_shutdown.clone();
+        
+        // Spawn a thread to check the shutdown flag
+        let _shutdown_checker = thread::spawn(move || {
+            while !reth_shutdown.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_millis(100));
+            }
+            info!("Shutdown signal received, setting shutdown flag");
+            check_shutdown_clone.store(true, Ordering::Relaxed);
+        });
+        
+        match start_reth_node(reth_db, check_shutdown) {
+            Ok(_) => info!("Reth node exited normally"),
+            Err(e) => error!("Reth node error: {}", e),
+        }
+        info!("Reth node thread terminated");
+    }).unwrap_or_else(|e| {
+        error!("Failed to spawn Reth thread: {}", e);
+        std::process::exit(1);
+    })
 }
 
 // Helper function to start the Reth node

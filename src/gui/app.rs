@@ -1,5 +1,6 @@
 use eframe::egui;
 use std::sync::{Arc, Mutex};
+use log::{info, error};
 use crate::db::HashChanDB;
 
 /// The main application state
@@ -20,6 +21,30 @@ impl HashChanApp {
             db,
             show_about: false,
         }
+    }
+    
+    /// Initialize and run the GUI application
+    pub fn init_and_run(db: Arc<Mutex<HashChanDB>>) -> Result<(), eframe::Error> {
+        // Set up the egui application
+        let options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default()
+                .with_inner_size([800.0, 600.0])
+                .with_min_inner_size([640.0, 480.0])
+                .with_title("HashChan Node"),
+            ..Default::default()
+        };
+        
+        info!("Starting GUI application");
+        
+        // Launch the egui application
+        eframe::run_native(
+            "HashChan Node",
+            options,
+            Box::new(|cc| {
+                // Create app with database connection
+                Ok(Box::new(HashChanApp::new(cc, db.clone())))
+            }),
+        )
     }
 }
 

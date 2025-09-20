@@ -1,8 +1,9 @@
 use eyre::Result;
 use rusqlite::{Connection, params};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use alloy_primitives::{Address, B256 as H256};
+use log::{info, error};
 
 use crate::reth::HashChanEvent;
 
@@ -217,6 +218,37 @@ impl HashChanDB {
     pub fn from_data_dir(data_dir: &Path) -> Result<Self> {
         let db_path = data_dir.join("hashchan.db");
         Self::new(&db_path)
+    }
+    
+    // Initialize the SQLite database
+    pub fn initialize() -> Result<Self, eyre::Error> {
+        // Get the data directory
+        let app_data_dir = Self::get_app_data_dir()?;
+        info!("Using data directory: {:?}", app_data_dir);
+        
+        // Create the database connection
+        let db = Self::from_data_dir(&app_data_dir)?;
+        info!("Database connection established");
+        
+        // Run migrations (tables are created in the HashChanDB::new method)
+        info!("Database schema initialized");
+        
+        Ok(db)
+    }
+    
+    // Get the application data directory
+    pub fn get_app_data_dir() -> Result<PathBuf, eyre::Error> {
+        let app_data_dir = if let Some(proj_dirs) = directories::ProjectDirs::from("com", "hashchan", "node") {
+            proj_dirs.data_dir().to_path_buf()
+        } else {
+            // Fallback to a local directory if we can't get the project directory
+            PathBuf::from("data")
+        };
+        
+        // Create the directory if it doesn't exist
+        std::fs::create_dir_all(&app_data_dir)?;
+        
+        Ok(app_data_dir)
     }
     
     pub fn store_event(&self, event: &HashChanEvent, block_number: u64) -> Result<()> {

@@ -225,6 +225,21 @@ pub async fn start_reth_node(db: Arc<std::sync::Mutex<DbClient>>, shutdown_flag:
     let data_dir = std::env::current_dir()?.join("data");
     std::fs::create_dir_all(&data_dir)?;
     
+    // Create JWT secret for Engine API if it doesn't exist
+    let jwt_dir = std::env::current_dir()?.join("jwt");
+    std::fs::create_dir_all(&jwt_dir)?;
+    let jwt_path = jwt_dir.join("jwt.hex");
+    
+    if !jwt_path.exists() {
+        info!("Generating JWT secret for Engine API");
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let jwt_bytes: Vec<u8> = (0..32).map(|_| rng.gen::<u8>()).collect();
+        let jwt_hex = hex::encode(&jwt_bytes);
+        std::fs::write(&jwt_path, jwt_hex)?;
+        info!("JWT secret written to {}", jwt_path.display());
+    }
+    
     // Create a vector of arguments to pass to the CLI
     let args = vec![
         "reth", 
@@ -233,6 +248,9 @@ pub async fn start_reth_node(db: Arc<std::sync::Mutex<DbClient>>, shutdown_flag:
         "--chain", "sepolia", // Use Sepolia testnet
         "--http",
         "--ws",
+        "--authrpc.addr", "0.0.0.0", // Listen on all interfaces for Engine API
+        "--authrpc.port", "8551", // Engine API port
+        "--authrpc.jwtsecret", jwt_path.to_str().unwrap_or("/jwt/jwt.hex"),
         "--log.stdout.filter", "info,reth=debug,hashchan_indexer=trace",
         "--verbosity" // Increase verbosity
     ];

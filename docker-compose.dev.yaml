@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Reth node service
+  # Reth node service (execution client)
   reth:
     build:
       context: .
@@ -32,11 +32,13 @@ services:
     volumes:
       - reth-data:/app/data
       - ./reth:/usr/src/reth
+      - jwt-secret:/app/jwt
     ports:
       - "8545:8545"  # JSON-RPC API
       - "8546:8546"  # WebSocket API
       - "30303:30303"  # P2P
       - "30303:30303/udp"  # P2P UDP
+      - "8551:8551"  # Engine API for consensus client
     develop:
       watch:
         - action: rebuild
@@ -64,6 +66,31 @@ services:
           path: ./ui/src
           target: /usr/src/ui/ui-service/src
 
+  # Lighthouse consensus client
+  lighthouse:
+    image: sigp/lighthouse:latest
+    depends_on:
+      - reth
+    command: >
+      lighthouse beacon
+      --network sepolia
+      --execution-endpoint http://reth:8551
+      --execution-jwt /jwt/jwt.hex
+      --checkpoint-sync-url https://beaconstate-sepolia.chainsafe.io
+      --http
+      --http-address 0.0.0.0
+      --disable-deposit-contract-sync
+    volumes:
+      - lighthouse-data:/root/.lighthouse
+      - jwt-secret:/jwt
+    ports:
+      - "9000:9000/tcp"
+      - "9000:9000/udp"
+      - "9001:9001/udp"
+      - "5052:5052"
+
 volumes:
   postgres-data:
   reth-data:
+  lighthouse-data:
+  jwt-secret:

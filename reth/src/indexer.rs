@@ -16,9 +16,9 @@ use reth_exex::{ExExContext, ExExEvent, ExExNotification};
 use reth_node_ethereum::EthereumNode;
 use reth_tracing::tracing::{info, warn};
 
-use crate::db::HashChanDB;
+use crate::db::DbClient;
 
-// HashChan3 event types
+// HashChan event types
 #[derive(Debug)]
 pub enum HashChanEvent {
     NewBoard {
@@ -59,7 +59,7 @@ pub struct HashChanExEx<Node: FullNodeComponents> {
     // Contract address for HashChan3
     hashchan_address: Address,
     // Database connection
-    db: Option<Arc<std::sync::Mutex<HashChanDB>>>,
+    db: Option<Arc<std::sync::Mutex<DbClient>>>,
     // First block that was committed since the start of the ExEx
     first_block: Option<BlockNumber>,
     // Total number of events processed
@@ -69,7 +69,7 @@ pub struct HashChanExEx<Node: FullNodeComponents> {
 }
 
 impl<Node: FullNodeComponents> HashChanExEx<Node> {
-    pub fn new(ctx: ExExContext<Node>, db: Option<Arc<std::sync::Mutex<HashChanDB>>>) -> Self {
+    pub fn new(ctx: ExExContext<Node>, db: Option<Arc<std::sync::Mutex<DbClient>>>) -> Self {
         // HashChan3 contract address
         let hashchan_address = match Address::from_str("0x458c27D5a6421AfAFF435e27E870584Fe03a938F") {
             Ok(addr) => addr,
@@ -180,7 +180,7 @@ impl<Node: FullNodeComponents<Types: NodeTypes<Primitives = EthPrimitives>>> Fut
 }
 
 // Start the Reth node in a separate thread and return a handle to the thread
-pub fn start_reth_thread(db: Arc<std::sync::Mutex<HashChanDB>>, shutdown_flag: Arc<AtomicBool>) -> JoinHandle<()> {
+pub fn start_reth_thread(db: Arc<std::sync::Mutex<DbClient>>, shutdown_flag: Arc<AtomicBool>) -> JoinHandle<()> {
     // Clone references for the thread
     let reth_db = db.clone();
     let reth_shutdown = shutdown_flag.clone();
@@ -206,7 +206,9 @@ pub fn start_reth_thread(db: Arc<std::sync::Mutex<HashChanDB>>, shutdown_flag: A
             check_shutdown_clone.store(true, Ordering::Relaxed);
         });
         
-        match start_reth_node(reth_db, check_shutdown) {
+        // Use a basic runtime to avoid nested runtime issues
+        let future = start_reth_node(reth_db, check_shutdown);
+        match futures_executor::block_on(future) {
             Ok(_) => info!("Reth node exited normally"),
             Err(e) => error!("Reth node error: {}", e),
         }
@@ -218,7 +220,7 @@ pub fn start_reth_thread(db: Arc<std::sync::Mutex<HashChanDB>>, shutdown_flag: A
 }
 
 // Helper function to start the Reth node
-pub fn start_reth_node(db: Arc<std::sync::Mutex<HashChanDB>>, shutdown_flag: Arc<AtomicBool>) -> eyre::Result<()> {
+pub async fn start_reth_node(db: Arc<std::sync::Mutex<DbClient>>, shutdown_flag: Arc<AtomicBool>) -> eyre::Result<()> {
     // Create a data directory for Reth
     let data_dir = std::env::current_dir()?.join("data");
     std::fs::create_dir_all(&data_dir)?;

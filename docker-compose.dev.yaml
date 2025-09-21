@@ -80,6 +80,7 @@ services:
       --http
       --http-address 0.0.0.0
       --disable-deposit-contract-sync
+      --disable-backfill-rate-limiting
     volumes:
       - lighthouse-data:/root/.lighthouse
       - jwt-secret:/jwt

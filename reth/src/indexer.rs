@@ -251,6 +251,12 @@ pub async fn start_reth_node(db: Arc<std::sync::Mutex<DbClient>>, shutdown_flag:
         "--authrpc.addr", "0.0.0.0", // Listen on all interfaces for Engine API
         "--authrpc.port", "8551", // Engine API port
         "--authrpc.jwtsecret", jwt_path.to_str().unwrap_or("/jwt/jwt.hex"),
+        "--full", // Enable pruning (non-archive mode)
+        "--prune.senderrecovery.full", // Fully prune sender recovery data
+        "--prune.transactionlookup.full", // Fully prune transaction lookup data
+        "--prune.accounthistory.full", // Fully prune account history
+        "--prune.storagehistory.full", // Fully prune storage history
+        "--prune.bodies.distance", "10000", // Keep only recent block bodies
         "--log.stdout.filter", "info,reth=debug,hashchan_indexer=trace",
         "--verbosity" // Increase verbosity
     ];
